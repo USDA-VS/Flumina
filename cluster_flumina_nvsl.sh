@@ -23,6 +23,8 @@ for i in $(ls *fastq.gz | awk -F_ '{print $1}'); do grep -q $i ${new_rename} || 
 sed -i "s#^READ_DIRECTORY=.*#READ_DIRECTORY=$curdir#" ${new_config}
 sed -i "s#^RENAME_FILE=.*#RENAME_FILE=$new_rename#" ${new_config}
 sed -i "s#^OUTPUT_DIRECTORY=.*#OUTPUT_DIRECTORY=$flu_out#" ${new_config}
+sed -i "s@^METADATA=.*@#METADATA=''@" ${new_config}
+sed -i "s@^GROUP_NAMES=.*@#GROUP_NAMES=''@" ${new_config}
 
 #run Flumina
 sbatch -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
