@@ -30,7 +30,7 @@ sed -i "s@^GROUP_NAMES=.*@#GROUP_NAMES=''@" ${new_config}
 sbatch -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 
 cd ./flumina_out
-for i in ./IRMA_results/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
+for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
 while read i; do cp -r ./BAM_files/$i $flu_out/sample_gathering/$i/BAM_files; done < sample_list
 while read i; do mkdir -p $flu_out/sample_gathering/$i/IRMA-consensus-contigs; cp -v ./IRMA-consensus-contigs/${i}.fasta $flu_out/sample_gathering/$i/IRMA-consensus-contigs; done < sample_list
 while read i; do cp -r ./IRMA_results/$i $flu_out/sample_gathering/$i/IRMA_results; done < sample_list
@@ -47,3 +47,5 @@ mv $curdir/rename* $flu_out/sample_gathering/run_${dd}
 mv $curdir/slurm* $flu_out/sample_gathering/run_${dd}
 cp ./variant_analysis/*.txt $flu_out/sample_gathering/run_${dd}
 cp ./variant_analysis/*.csv $flu_out/sample_gathering/run_${dd}
+mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
+mv $flu_out/sample_gathering/run_${dd}/slurm* $flu_out/sample_gathering/run_${dd}/slurm_out
