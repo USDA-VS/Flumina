@@ -38,6 +38,7 @@ while read i; do cp -r ./logs/$i $flu_out/sample_gathering/$i/logs; done < sampl
 while read i; do cp -r ./processed-reads/$i $flu_out/sample_gathering/$i/processed-reads; done < sample_list
 while read i; do cp -r ./vcf_files/$i $flu_out/sample_gathering/$i/vcf_files; done < sample_list
 while read i; do mkdir -p $flu_out/sample_gathering/$i/variant_analysis; cp -v ./variant_analysis/aa_db/${i}.csv $flu_out/sample_gathering/$i/variant_analysis; done < sample_list
+while read i; do grep "$i" $flu_out/variant_analysis/curated_amino_acids.txt > $flu_out/sample_gathering/"$i"/variant_analysis/"$i"_curated_amino_acids.txt; done < sample_list
 
 mkdir -p $flu_out/sample_gathering/run_${dd}
 mv ~/git/_github/Flumina/slurm* $flu_out/sample_gathering/run_${dd}
