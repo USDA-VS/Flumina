@@ -27,7 +27,7 @@ sed -i "s@^METADATA=.*@#METADATA=''@" ${new_config}
 sed -i "s@^GROUP_NAMES=.*@#GROUP_NAMES=''@" ${new_config}
 
 #run Flumina
-sbatch -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 
 cd ./flumina_out
 for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
