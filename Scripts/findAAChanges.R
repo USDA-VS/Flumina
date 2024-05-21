@@ -51,6 +51,7 @@ if(length(metadata.file) == 0L) {
 
 #Set multithreading and memory usage
 threads = as.numeric(gsub("\"", "", config$THREADS))
+# threads = 40
 
 
 #############################################

@@ -29,23 +29,23 @@ sed -i "s@^GROUP_NAMES=.*@#GROUP_NAMES=''@" ${new_config}
 #run Flumina
 sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 
-cd ./flumina_out
-for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
-while read i; do cp -r ./BAM_files/$i $flu_out/sample_gathering/$i/BAM_files; done < sample_list
-while read i; do mkdir -p $flu_out/sample_gathering/$i/IRMA-consensus-contigs; cp -v ./IRMA-consensus-contigs/${i}.fasta $flu_out/sample_gathering/$i/IRMA-consensus-contigs; done < sample_list
-while read i; do cp -r ./IRMA_results/$i $flu_out/sample_gathering/$i/IRMA_results; done < sample_list
-while read i; do cp -r ./logs/$i $flu_out/sample_gathering/$i/logs; done < sample_list
-while read i; do cp -r ./processed-reads/$i $flu_out/sample_gathering/$i/processed-reads; done < sample_list
-while read i; do cp -r ./vcf_files/$i $flu_out/sample_gathering/$i/vcf_files; done < sample_list
-while read i; do mkdir -p $flu_out/sample_gathering/$i/variant_analysis; cp -v ./variant_analysis/aa_db/${i}.csv $flu_out/sample_gathering/$i/variant_analysis; done < sample_list
-while read i; do grep "$i" $flu_out/variant_analysis/curated_amino_acids.txt > $flu_out/sample_gathering/"$i"/variant_analysis/"$i"_curated_amino_acids.txt; done < sample_list
+# cd ./flumina_out
+# for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
+# while read i; do cp -r ./BAM_files/$i $flu_out/sample_gathering/$i/BAM_files; done < sample_list
+# while read i; do mkdir -p $flu_out/sample_gathering/$i/IRMA-consensus-contigs; cp -v ./IRMA-consensus-contigs/${i}.fasta $flu_out/sample_gathering/$i/IRMA-consensus-contigs; done < sample_list
+# while read i; do cp -r ./IRMA_results/$i $flu_out/sample_gathering/$i/IRMA_results; done < sample_list
+# while read i; do cp -r ./logs/$i $flu_out/sample_gathering/$i/logs; done < sample_list
+# while read i; do cp -r ./processed-reads/$i $flu_out/sample_gathering/$i/processed-reads; done < sample_list
+# while read i; do cp -r ./vcf_files/$i $flu_out/sample_gathering/$i/vcf_files; done < sample_list
+# while read i; do mkdir -p $flu_out/sample_gathering/$i/variant_analysis; cp -v ./variant_analysis/aa_db/${i}.csv $flu_out/sample_gathering/$i/variant_analysis; done < sample_list
+# while read i; do grep "$i" $flu_out/variant_analysis/curated_amino_acids.txt > $flu_out/sample_gathering/"$i"/variant_analysis/"$i"_curated_amino_acids.txt; done < sample_list
 
-mkdir -p $flu_out/sample_gathering/run_${dd}
-mv ~/git/_github/Flumina/slurm* $flu_out/sample_gathering/run_${dd}
-mv $curdir/config* $flu_out/sample_gathering/run_${dd}
-mv $curdir/rename* $flu_out/sample_gathering/run_${dd}
-mv $curdir/slurm* $flu_out/sample_gathering/run_${dd}
-cp ./variant_analysis/*.txt $flu_out/sample_gathering/run_${dd}
-cp ./variant_analysis/*.csv $flu_out/sample_gathering/run_${dd}
-mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
-mv $flu_out/sample_gathering/run_${dd}/slurm* $flu_out/sample_gathering/run_${dd}/slurm_out
+# mkdir -p $flu_out/sample_gathering/run_${dd}
+# mv ~/git/_github/Flumina/slurm* $flu_out/sample_gathering/run_${dd}
+# mv $curdir/config* $flu_out/sample_gathering/run_${dd}
+# mv $curdir/rename* $flu_out/sample_gathering/run_${dd}
+# mv $curdir/slurm* $flu_out/sample_gathering/run_${dd}
+# cp ./variant_analysis/*.txt $flu_out/sample_gathering/run_${dd}
+# cp ./variant_analysis/*.csv $flu_out/sample_gathering/run_${dd}
+# mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
+# mv $flu_out/sample_gathering/run_${dd}/slurm* $flu_out/sample_gathering/run_${dd}/slurm_out

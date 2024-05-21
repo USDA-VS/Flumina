@@ -6,6 +6,8 @@
 
 date
 
+module purge
+module load slurm
 module load anaconda3
 
 source activate /project/shared/anaconda_env/Flumina
