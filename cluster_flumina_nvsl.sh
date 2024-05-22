@@ -3,6 +3,13 @@
 #SBATCH -N 1
 #SBATCH -t 168:00:00
 
+new_reference_file=$1
+
+# if altered reference file is provided, echo it
+if [[ -n $new_reference_file ]]; then
+    echo "Using reference file: $new_reference_file"
+fi
+
 dd=`date +"%Y-%m-%d_%H-%M-%S"`
 curdir=`pwd`
 flu_out=$curdir/flumina_out
@@ -26,8 +33,13 @@ sed -i "s#^OUTPUT_DIRECTORY=.*#OUTPUT_DIRECTORY=$flu_out#" ${new_config}
 sed -i "s@^METADATA=.*@#METADATA=''@" ${new_config}
 sed -i "s@^GROUP_NAMES=.*@#GROUP_NAMES=''@" ${new_config}
 
+# replace reference file in the config file if new_reference_file is provided
+if [[ -n $new_reference_file ]]; then
+    sed -i "s#^REFERENCE_FILE=.*#REFERENCE_FILE=./references/$new_reference_file#" ${new_config}
+fi
+
 #run Flumina
-sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+/cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 
 # cd ./flumina_out
 # for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
@@ -40,11 +52,11 @@ sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/F
 # while read i; do mkdir -p $flu_out/sample_gathering/$i/variant_analysis; cp -v ./variant_analysis/aa_db/${i}.csv $flu_out/sample_gathering/$i/variant_analysis; done < sample_list
 # while read i; do grep "$i" $flu_out/variant_analysis/curated_amino_acids.txt > $flu_out/sample_gathering/"$i"/variant_analysis/"$i"_curated_amino_acids.txt; done < sample_list
 
-# mkdir -p $flu_out/sample_gathering/run_${dd}
-# mv ~/git/_github/Flumina/slurm* $flu_out/sample_gathering/run_${dd}
+mkdir -p $flu_out/slurm
+mv ~/git/_github/Flumina/slurm* $flu_out/slurm
+mv $curdir/slurm* $flu_out/slurm
 # mv $curdir/config* $flu_out/sample_gathering/run_${dd}
 # mv $curdir/rename* $flu_out/sample_gathering/run_${dd}
-# mv $curdir/slurm* $flu_out/sample_gathering/run_${dd}
 # cp ./variant_analysis/*.txt $flu_out/sample_gathering/run_${dd}
 # cp ./variant_analysis/*.csv $flu_out/sample_gathering/run_${dd}
 # mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
