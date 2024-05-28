@@ -70,7 +70,7 @@ collect.data[, alternative:=as.character(alternative)]
 #Loops through each locus and does operations on them
 x = 1
 for (i in 1:length(vcf.files)){
-  
+
   #Counts comment lines to find first line
   VCF = file(paste0(vcf.directory, "/", vcf.files[i]), "r")
   skip = 0
@@ -90,6 +90,15 @@ for (i in 1:length(vcf.files)){
   
   if (is.null(nrow(VCF)) == TRUE || nrow(VCF) == 0){
     
+    # If we're at the end of the data.table, add more rows
+    if (x > nrow(collect.data)) {
+      extra.rows = data.table::data.table(matrix(as.numeric(0),
+                                                nrow = length(vcf.files),
+                                                ncol = length(header.data)))
+      data.table::setnames(extra.rows, header.data)
+      collect.data = rbind(collect.data, extra.rows)
+    }
+
     data.table::set(collect.data, i = as.integer(x), j = match("method", header.data), value = "LoFreq")
     #Collect data
     data.table::set(collect.data, i = as.integer(x), j = match("sample", header.data), value = gsub("/.*", "", vcf.files[i]) )
@@ -109,6 +118,15 @@ for (i in 1:length(vcf.files)){
   
   for (j in 1:nrow(VCF)){
     
+    # If we're at the end of the data.table, add more rows
+    if (x > nrow(collect.data)) {
+      extra.rows = data.table::data.table(matrix(as.numeric(0),
+                                                nrow = length(vcf.files),
+                                                ncol = length(header.data)))
+      data.table::setnames(extra.rows, header.data)
+      collect.data = rbind(collect.data, extra.rows)
+    }
+
     data.table::set(collect.data, i = as.integer(x), j = match("method", header.data), value = "LoFreq")
     
     #Collect data

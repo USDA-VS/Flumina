@@ -84,7 +84,7 @@ red.samples$sample = gsub("-r_", "_", red.samples$sample)
 red.samples$sample = gsub("-v_", "_", red.samples$sample)
 
 #minimum allele frequency 
-red.samples = red.samples[red.samples$allele_frequency >= 0.005,]
+red.samples = red.samples[red.samples$allele_frequency >= 0.05,]
 
 #Obtains different animal groups, if desired
 if (is.null(group.names) != TRUE){
@@ -109,8 +109,8 @@ for (i in 1:length(group.values)){
     #Subsets data
     gene.data = group.data[grep(gene.names[j], group.data$locus),]
     
-    #Gets unique positions
-    aa.pos = unique(gene.data$aa_position)
+    #Gets unique combinations of aa_position and alternative_aa
+    aa.pos = unique(gene.data[,c("aa_position", "alternative_aa")])
     
     #empty table
     temp.table = data.frame(animal = as.character(),
@@ -125,8 +125,8 @@ for (i in 1:length(group.values)){
                             gatk4 = as.numeric())
     
     #Loops through positions
-    for (k in 1:length(aa.pos)){
-      
+    for (k in 1:nrow(aa.pos)){
+
       #empty data for this section
       vector.table = data.frame(animal = as.character(),
                                 gene = as.character(),
@@ -140,19 +140,19 @@ for (i in 1:length(group.values)){
                                 gatk4 = as.numeric())
       
       #Subsets to amino acid data
-      aa.data = gene.data[gene.data$aa_position == aa.pos[k],]
+      aa.data = gene.data[gene.data$aa_position == aa.pos[k, "aa_position"] & gene.data$alternative_aa == aa.pos[k, "alternative_aa"],]
       lf.data = aa.data[aa.data$method %in% "LoFreq",]
       gk.data = aa.data[aa.data$method %in% "GATK4",]
       
       ##### Groupings categories
       vector.table[1,1] = group.values[i]
       vector.table[1,2] = gene.names[j]
-      vector.table[1,3] = aa.pos[k]
+      vector.table[1,3] = aa.pos[k, "aa_position"]
       
       #Formats mutation names
       ref.chars = unique(aa.data$reference_aa)
-      aa.chars = unique(aa.data$alternative_aa)
-      new.chars = paste0(ref.chars, aa.pos[k], aa.chars)
+      aa.chars = aa.pos[k, "alternative_aa"]
+      new.chars = paste0(ref.chars, aa.pos[k, "aa_position"], aa.chars)
       vector.table[1,4] = paste0(new.chars, collapse = ", ")
       
       #saves AA type
