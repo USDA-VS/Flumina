@@ -50,6 +50,9 @@ sample.data = read.table(paste0(output.directory, "/all_sample_amino_acids.txt")
 best.aa = read.csv(aa.table.path, header = TRUE, sep = ",")
 best.aa[is.na(best.aa) == TRUE] = "NA"
 
+#Filter out mutations <= 0.05 allele frequency
+sample.data = sample.data[sample.data$allele_frequency >= 0.05,]
+
 #Obtains gene names
 gene.names = unique(sample.data$locus)
 
