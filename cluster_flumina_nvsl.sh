@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Flumina-config-setup
-#SBATCH -N 1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=5G
 #SBATCH -t 168:00:00
 
 new_reference_file=$1
@@ -38,8 +39,19 @@ if [[ -n $new_reference_file ]]; then
     sed -i "s#^REFERENCE_FILE=.*#REFERENCE_FILE=./references/$new_reference_file#" ${new_config}
 fi
 
-#run Flumina
-/cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+# check if ran with bash (from inside dvl_irma) or sbatch (standalone)
+if [ "$2" == "no_slurm" ]; then
+    echo "Script was run with bash. Not executing via slurm"
+    sed -i "s@^CLUSTER_JOBS=.*@CLUSTER_JOBS=FALSE@" ${new_config}
+    sed -i "s@^THREADS=.*@THREADS=4@" ${new_config}
+    #run Flumina
+    cd ~/git/_github/Flumina && /usr/bin/bash ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+else
+    echo "Script was run with sbatch"
+    /cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+fi
+
+
 
 # cd ./flumina_out
 # for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done

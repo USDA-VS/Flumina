@@ -50,8 +50,8 @@ sample.data = read.table(paste0(output.directory, "/all_sample_amino_acids.txt")
 best.aa = read.csv(aa.table.path, header = TRUE, sep = ",")
 best.aa[is.na(best.aa) == TRUE] = "NA"
 
-#Filter out mutations <= 0.05 allele frequency
-sample.data = sample.data[sample.data$allele_frequency >= 0.05,]
+#Filter out mutations <= 0.01 allele frequency
+sample.data = sample.data[sample.data$allele_frequency >= 0.01,]
 
 #Obtains gene names
 gene.names = unique(sample.data$locus)
@@ -87,7 +87,7 @@ red.samples$sample = gsub("-r_", "_", red.samples$sample)
 red.samples$sample = gsub("-v_", "_", red.samples$sample)
 
 #minimum allele frequency 
-red.samples = red.samples[red.samples$allele_frequency >= 0.05,]
+red.samples = red.samples[red.samples$allele_frequency >= 0.01,]
 
 #Obtains different animal groups, if desired
 if (is.null(group.names) != TRUE){
