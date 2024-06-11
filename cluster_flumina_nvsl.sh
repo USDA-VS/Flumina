@@ -73,3 +73,7 @@ mv $curdir/slurm* $flu_out/slurm
 # cp ./variant_analysis/*.csv $flu_out/sample_gathering/run_${dd}
 # mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
 # mv $flu_out/sample_gathering/run_${dd}/slurm* $flu_out/sample_gathering/run_${dd}/slurm_out
+
+grep -l ".*PB2.*,271,.*T,A,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F/ '{ gsub(".csv", "", $NF); print $NF }' > $flu_out/variant_analysis/T271A.txt
+grep -l ".*PB2.*,701,.*D,N,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F/ '{ gsub(".csv", "", $NF); print $NF }' > $flu_out/variant_analysis/D701N.txt
+grep -l ".*PB2.*,627,.*E,K,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F/ '{ gsub(".csv", "", $NF); print $NF }' > $flu_out/variant_analysis/E627K.txt
