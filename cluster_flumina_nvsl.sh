@@ -74,6 +74,17 @@ mv $curdir/slurm* $flu_out/slurm
 # mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
 # mv $flu_out/sample_gathering/run_${dd}/slurm* $flu_out/sample_gathering/run_${dd}/slurm_out
 
-grep -l ".*PB2.*,271,.*T,A,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F/ '{ gsub(".csv", "", $NF); print $NF }' > $flu_out/variant_analysis/T271A.txt
-grep -l ".*PB2.*,701,.*D,N,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F/ '{ gsub(".csv", "", $NF); print $NF }' > $flu_out/variant_analysis/D701N.txt
-grep -l ".*PB2.*,627,.*E,K,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F/ '{ gsub(".csv", "", $NF); print $NF }' > $flu_out/variant_analysis/E627K.txt
+# add sample count to T271A_D701N_E627K.txt
+sample_count=`ls  $flu_out/variant_analysis/aa_db/* | wc -l`
+echo "Number of samples in analysis: $sample_count" >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+echo "" >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+
+# Search for T271A, D701N, and E627K in the aa_db files and write to T271A_D701N_E627K.txt
+echo 'T271A' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+grep ".*PB2.*,271,.*T,A,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+
+echo 'D701N' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+grep ".*PB2.*,701,.*D,N,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+
+echo 'E627K' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+grep ".*PB2.*,627,.*E,K,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
