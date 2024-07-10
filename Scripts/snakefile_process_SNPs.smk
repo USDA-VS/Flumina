@@ -40,7 +40,6 @@ rule fastp_process:
         " --out1 {output[0]} --out2 {output[1]}"
         " --length_required 60 --low_complexity_filter --complexity_threshold 30"
         " --trim_poly_x --correction --detect_adapter_for_pe"
-        " --dedup dup_calc_accuracy 5"
         " --html logs/fastp-{wildcards.sample}.html --json logs/fastp-{wildcards.sample}.json --compression 8"
         " report_title {wildcards.sample}"
 
@@ -238,5 +237,5 @@ rule run_loFreq:
     output:
         "vcf_files/{sample}/lofreq-called-variants.vcf"
     shell:
-        "lofreq call -f {input.reference}"
+        "lofreq call --no-default-filter -f {input.reference}"
         " -o {output} {input.reads}"
