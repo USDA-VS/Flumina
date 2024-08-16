@@ -52,6 +52,10 @@ if(length(metadata.file) == 0L) {
 #Set multithreading and memory usage
 threads = as.numeric(gsub("\"", "", config$THREADS))
 # threads = 40
+# if threads greater than system threads, set to system threads
+if (threads > parallel::detectCores()){
+  threads = parallel::detectCores()
+}
 
 
 #############################################
@@ -82,56 +86,62 @@ foreach::foreach(i = seq_along(sample.names), .packages = c("foreach", "Biostrin
   
   #loops through each gene to assess amino acids
   new.gene = c()
-  for (j in 1:length(gene.names)){
-    
-    #Creates empty spots for new variables
-    gene.data = sample.data[sample.data$locus %in% gene.names[j],]
-    
-    if (nrow(gene.data) == 0){ next }
-    
-    gene.data$reference_codon = "NA"
-    gene.data$alternative_codon = "NA"
-    gene.data$reference_aa = "NA"
-    gene.data$alternative_aa = "NA"
-    gene.data$aa_changing = "NA"
-    
-    #Subsets to reference for specific gene, translates
-    ref.seq = as.character(reference[names(reference) == gene.names[j]])
-
-    #loops through each row in the gene data to translate
-    for (k in 1:nrow(gene.data)){
-    
-      #skips if no data for gene  
+  tryCatch({
+    for (j in 1:length(gene.names)){
+      
+      #Creates empty spots for new variables
+      gene.data = sample.data[sample.data$locus %in% gene.names[j],]
+      
       if (nrow(gene.data) == 0){ next }
       
-      #Converts gene reference to character vector to change to alternative allele position
-      gene.char = unlist(strsplit(as.character(ref.seq), ""))
-      gene.char[gene.data$position[k]] = gene.data$alternative[k]
-      new.seq = Biostrings::DNAStringSet(paste(gene.char, collapse = ""))
-
-      #Subseqs the codons out
-      gene.data$reference_codon[k] = Biostrings::subseq(ref.seq, 
-                                                        start = (gene.data$aa_position[k] - 1) * 3 + 1, 
-                                                        end = (gene.data$aa_position[k] - 1) * 3 + 3 ) 
+      gene.data$reference_codon = "NA"
+      gene.data$alternative_codon = "NA"
+      gene.data$reference_aa = "NA"
+      gene.data$alternative_aa = "NA"
+      gene.data$aa_changing = "NA"
       
-      gene.data$alternative_codon[k] = Biostrings::subseq(new.seq, 
+      #Subsets to reference for specific gene, translates
+      ref.seq = as.character(reference[names(reference) == gene.names[j]])
+
+      #loops through each row in the gene data to translate
+      for (k in 1:nrow(gene.data)){
+      
+        #skips if no data for gene  
+        if (nrow(gene.data) == 0){ next }
+        
+        #Converts gene reference to character vector to change to alternative allele position
+        gene.char = unlist(strsplit(as.character(ref.seq), ""))
+        gene.char[gene.data$position[k]] = gene.data$alternative[k]
+        new.seq = Biostrings::DNAStringSet(paste(gene.char, collapse = ""))
+
+        #Subseqs the codons out
+        gene.data$reference_codon[k] = Biostrings::subseq(ref.seq, 
                                                           start = (gene.data$aa_position[k] - 1) * 3 + 1, 
                                                           end = (gene.data$aa_position[k] - 1) * 3 + 3 ) 
-      #translates codon
-      gene.data$reference_aa[k] = as.character(seqinr::translate(unlist(strsplit(gene.data$reference_codon[k], ""))))
-      gene.data$alternative_aa[k] = as.character(seqinr::translate(unlist(strsplit(gene.data$alternative_codon[k], ""))))
-      
-      #Checks if it changed the amino acid
-      if (gene.data$reference_aa[k] == gene.data$alternative_aa[k]){
-        gene.data$aa_changing[k] = "NO"
-      } else { gene.data$aa_changing[k] = "YES"}
-      
-    }#end k
-  
-    #Saves all data
-    new.gene = rbind(new.gene, gene.data)  
+        
+        gene.data$alternative_codon[k] = Biostrings::subseq(new.seq, 
+                                                            start = (gene.data$aa_position[k] - 1) * 3 + 1, 
+                                                            end = (gene.data$aa_position[k] - 1) * 3 + 3 ) 
+        #translates codon
+        gene.data$reference_aa[k] = as.character(seqinr::translate(unlist(strsplit(gene.data$reference_codon[k], ""))))
+        gene.data$alternative_aa[k] = as.character(seqinr::translate(unlist(strsplit(gene.data$alternative_codon[k], ""))))
+        
+        #Checks if it changed the amino acid
+        if (gene.data$reference_aa[k] == gene.data$alternative_aa[k]){
+          gene.data$aa_changing[k] = "NO"
+        } else { gene.data$aa_changing[k] = "YES"}
+        
+      }#end k
     
-  }# end j loop
+      #Saves all data
+      new.gene = rbind(new.gene, gene.data)  
+      
+    }# end j loop
+  }, error = function(e) {
+    print(paste("Error in sample", sample.names[i]))
+    print(e)
+    return(NULL)
+  })#end tryCatch
   
   #Writes data for each sample
   write.csv(new.gene, paste0(output.directory, "/aa_db/", sample.names[i], ".csv"),

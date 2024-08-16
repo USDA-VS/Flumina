@@ -48,6 +48,8 @@ if [ "$2" == "no_slurm" ]; then
     cd ~/git/_github/Flumina && /usr/bin/bash ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 else
     echo "Script was run with sbatch"
+    # set THREADS to 200
+    sed -i "s@^THREADS=.*@THREADS=200@" ${new_config}
     /cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 fi
 

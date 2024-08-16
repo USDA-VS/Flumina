@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Flumina-nvsl
 #SBATCH -N 1
+#SBATCH -p prod-compute-mem
 #SBATCH -t 168:00:00
 
 
