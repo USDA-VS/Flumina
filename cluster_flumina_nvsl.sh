@@ -1,8 +1,13 @@
-#!/bin/bash
+#!/bin/bash -l
 #SBATCH --job-name=Flumina-config-setup
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=5G
+#SBATCH --account="aap mr scicomp hpc cnah users" 
+#SBATCH --partition=scicomp-compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=20G
 #SBATCH -t 168:00:00
+#SBATCH --export=none
 
 new_reference_file=$1
 
@@ -20,7 +25,7 @@ flu_out=$curdir/flumina_out
 # copy and edit config file
 new_config=${curdir}/config_${dd}.cfg
 new_rename=${curdir}/rename_${dd}.csv
-cp ~/git/_github/Flumina/config.cfg ${new_config}
+cp /git/_github/Flumina/config.cfg ${new_config}
 
 # generate new rename file, splitting on _ and grabbing the first field. Doesn't currently rename, but file is required
 printf "File,Sample\n" > ${new_rename}
@@ -44,15 +49,16 @@ if [ "$2" == "no_slurm" ]; then
     echo "Script was run with bash. Not executing via slurm"
     sed -i "s@^CLUSTER_JOBS=.*@CLUSTER_JOBS=FALSE@" ${new_config}
     sed -i "s@^THREADS=.*@THREADS=4@" ${new_config}
-    #run Flumina
-    cd ~/git/_github/Flumina && /usr/bin/bash ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+    # run Flumina
+    # FIXED: Using 'bash' instead of '/usr/bin/bash'
+    cd /git/_github/Flumina && bash /git/_github/Flumina/flumina_nvsl.sh ${new_config}
 else
     echo "Script was run with sbatch"
     # set THREADS to 200
     sed -i "s@^THREADS=.*@THREADS=200@" ${new_config}
-    /cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D ~/git/_github/Flumina ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+    # FIXED: Using absolute /git paths for the Slurm directory (-D) and the script
+    /cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D /git/_github/Flumina /git/_github/Flumina/flumina_nvsl.sh ${new_config}
 fi
-
 
 
 # cd ./flumina_out
@@ -67,7 +73,7 @@ fi
 # while read i; do grep "$i" $flu_out/variant_analysis/curated_amino_acids.txt > $flu_out/sample_gathering/"$i"/variant_analysis/"$i"_curated_amino_acids.txt; done < sample_list
 
 mkdir -p $flu_out/slurm
-mv ~/git/_github/Flumina/slurm* $flu_out/slurm
+mv /git/_github/Flumina/slurm* $flu_out/slurm
 mv $curdir/slurm* $flu_out/slurm
 # mv $curdir/config* $flu_out/sample_gathering/run_${dd}
 # mv $curdir/rename* $flu_out/sample_gathering/run_${dd}
