@@ -11,8 +11,10 @@
 
 date
 
-# REMOVED: module purge, module load, and source activate
-# The Apptainer container natively supplies the 'dvl_irma' conda environment.
+source /usr/local/miniforge3/etc/profile.d/conda.sh
+
+# Activate the dedicated Flumina environment
+conda activate Flumina
 
 # FIXED: Changed ~/git to the absolute container path /git
 bash /git/_github/Flumina/Flumina ${1}
