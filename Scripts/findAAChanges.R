@@ -114,6 +114,9 @@ foreach::foreach(i = seq_along(sample.names), .packages = c("foreach", "Biostrin
         gene.char[gene.data$position[k]] = gene.data$alternative[k]
         new.seq = Biostrings::DNAStringSet(paste(gene.char, collapse = ""))
 
+        # skip rows with missing data that cause length zero crashes
+        if (is.na(gene.data$position[k]) || is.na(gene.data$alternative[k]) || nchar(gene.data$alternative[k]) == 0){ next }
+        
         #Subseqs the codons out
         gene.data$reference_codon[k] = Biostrings::subseq(ref.seq, 
                                                           start = (gene.data$aa_position[k] - 1) * 3 + 1, 
