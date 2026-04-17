@@ -45,13 +45,14 @@ if [[ -n $new_reference_file ]]; then
 fi
 
 # check if ran with bash (from inside dvl_irma) or sbatch (standalone)
-if [ "$2" == "no_slurm" ]; then
+if [ "$run_mode" == "no_slurm" ]; then
     echo "Script was run with bash. Not executing via slurm"
     sed -i "s@^CLUSTER_JOBS=.*@CLUSTER_JOBS=FALSE@" ${new_config}
-    sed -i "s@^THREADS=.*@THREADS=4@" ${new_config}
-    # run Flumina
-    # FIXED: Using 'bash' instead of '/usr/bin/bash'
-    cd /git/_github/Flumina && bash /git/_github/Flumina/flumina_nvsl.sh ${new_config}
+    threads_to_use=${num_threads:-4}
+    echo "Setting THREADS to $threads_to_use"
+    sed -i "s@^THREADS=.*@THREADS=$threads_to_use@" ${new_config}
+    
+    cd ~/git/_github/Flumina && /usr/bin/bash ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
 else
     echo "Script was run with sbatch"
     # set THREADS to 200
