@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #SBATCH --job-name=Flumina-config-setup
-#SBATCH --account="aap mr scicomp hpc cnah users"
+#SBATCH --account="aap mr scicomp hpc ncah users"
 #SBATCH --partition=scicomp-compute
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -9,6 +9,9 @@
 #SBATCH -t 168:00:00
 #SBATCH --export=none
 
+# --- FIX: Add set -e to exit immediately on error ---
+set -e
+
 # --- Read arguments from the Python script ---
 new_reference_file=$1
 run_mode=$2    # This will be "no_slurm"
@@ -16,13 +19,11 @@ num_threads=$3 # This will be the CPU count (e.g., "64")
 
 # --- Define Paths ---
 # This is the path to the Flumina code *as seen inside the container*
-# It must match the bind mount from your worker script.
-FLUMINA_CODE_PATH="/git/gitlab/dvl_irma/flumina" # Assuming Flumina is inside dvl_irma
+FLUMINA_CODE_PATH="/git/_github/Flumina"
 
 # Check if the path exists
 if [ ! -d "$FLUMINA_CODE_PATH" ]; then
     echo "FATAL ERROR: Flumina code path not found inside container at $FLUMINA_CODE_PATH"
-    echo "Please check the --bind mount in your worker_dvl_irma.sh script."
     exit 1
 fi
 
@@ -31,7 +32,6 @@ if [[ -n "$new_reference_file" ]]; then
     echo "Using reference file: $new_reference_file"
 fi
 
-# Corrected command substitution
 dd=$(date +"%Y-%m-%d_%H-%M-%S")
 curdir=$(pwd)
 flu_out=$curdir/flumina_out
@@ -43,7 +43,7 @@ cp "${FLUMINA_CODE_PATH}/config.cfg" ${new_config}
 
 # Generate new rename file more robustly
 printf "File,Sample\n" > ${new_rename}
-# Get a unique sample name from one of the R1 files
+# --- FIX: Correctly parse sample name using wildcards ---
 sample_name=$(ls *_R1_*.fastq.gz | head -n 1 | awk -F_ '{print $1}')
 echo "$sample_name,$sample_name" >> ${new_rename}
 
@@ -63,8 +63,7 @@ fi
 if [ "$run_mode" == "no_slurm" ]; then
     echo "Script was run with bash. Not executing via slurm."
     sed -i "s@^CLUSTER_JOBS=.*@CLUSTER_JOBS=FALSE@" ${new_config}
-
-    # Use the provided thread count from the Python script, or default to 4.
+    
     threads_to_use=${num_threads:-4}
     echo "Setting THREADS in config file to: $threads_to_use"
     sed -i "s@^THREADS=.*@THREADS=$threads_to_use@" ${new_config}
@@ -75,6 +74,7 @@ else
     # This block is for running the script standalone, not from your Python pipeline
     echo "Script was run with sbatch. Submitting a new Slurm job for Flumina."
     sed -i "s@^THREADS=.*@THREADS=200@" ${new_config}
+    # --- FIX: Use 'sbatch' directly instead of a hardcoded path ---
     sbatch --mem 650G --cpus-per-task=40 -W -D "$FLUMINA_CODE_PATH" "${FLUMINA_CODE_PATH}/flumina_nvsl.sh" ${new_config}
 fi
 
@@ -87,7 +87,7 @@ if [ -d "$flu_out/variant_analysis/aa_db" ]; then
     mv "${FLUMINA_CODE_PATH}/slurm"* "$flu_out/slurm/" 2>/dev/null
     mv "${curdir}/slurm"* "$flu_out/slurm/" 2>/dev/null
 
-    sample_count=$(ls "$flu_out/variant_analysis/aa_db/"*.csv | wc -l)
+    sample_count=$(find "$flu_out/variant_analysis/aa_db/" -name "*.csv" | wc -l)
     analysis_file="$flu_out/variant_analysis/T271A_D701N_E627K.txt"
 
     echo "Number of samples in analysis: $sample_count" >> "$analysis_file"
