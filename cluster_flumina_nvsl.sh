@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #SBATCH --job-name=Flumina-config-setup
-#SBATCH --account="aap mr scicomp hpc cnah users" 
+#SBATCH --account="aap mr scicomp hpc cnah users"
 #SBATCH --partition=scicomp-compute
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -9,91 +9,97 @@
 #SBATCH -t 168:00:00
 #SBATCH --export=none
 
+# --- Read arguments from the Python script ---
 new_reference_file=$1
+run_mode=$2    # This will be "no_slurm"
+num_threads=$3 # This will be the CPU count (e.g., "64")
 
-# if altered reference file is provided, echo it
-if [[ -n $new_reference_file ]]; then
+# --- Define Paths ---
+# This is the path to the Flumina code *as seen inside the container*
+# It must match the bind mount from your worker script.
+FLUMINA_CODE_PATH="/git/gitlab/dvl_irma/flumina" # Assuming Flumina is inside dvl_irma
+
+# Check if the path exists
+if [ ! -d "$FLUMINA_CODE_PATH" ]; then
+    echo "FATAL ERROR: Flumina code path not found inside container at $FLUMINA_CODE_PATH"
+    echo "Please check the --bind mount in your worker_dvl_irma.sh script."
+    exit 1
+fi
+
+# --- Setup ---
+if [[ -n "$new_reference_file" ]]; then
     echo "Using reference file: $new_reference_file"
 fi
 
-dd=`date +"%Y-%m-%d_%H-%M-%S"`
-curdir=`pwd`
+# Corrected command substitution
+dd=$(date +"%Y-%m-%d_%H-%M-%S")
+curdir=$(pwd)
 flu_out=$curdir/flumina_out
-# module load anaconda3
-# source activate /project/shared/anaconda_env/Flumina
 
-# copy and edit config file
+# Copy and edit config file from the correct path
 new_config=${curdir}/config_${dd}.cfg
 new_rename=${curdir}/rename_${dd}.csv
-cp /git/_github/Flumina/config.cfg ${new_config}
+cp "${FLUMINA_CODE_PATH}/config.cfg" ${new_config}
 
-# generate new rename file, splitting on _ and grabbing the first field. Doesn't currently rename, but file is required
+# Generate new rename file more robustly
 printf "File,Sample\n" > ${new_rename}
-for i in $(ls *fastq.gz | awk -F_ '{print $1}'); do grep -q $i ${new_rename} || echo $i,$i >> ${new_rename}; done
+# Get a unique sample name from one of the R1 files
+sample_name=$(ls *_R1_*.fastq.gz | head -n 1 | awk -F_ '{print $1}')
+echo "$sample_name,$sample_name" >> ${new_rename}
 
-
-# replace rename file and read directory in the config file
+# Replace paths in the config file
 sed -i "s#^READ_DIRECTORY=.*#READ_DIRECTORY=$curdir#" ${new_config}
 sed -i "s#^RENAME_FILE=.*#RENAME_FILE=$new_rename#" ${new_config}
 sed -i "s#^OUTPUT_DIRECTORY=.*#OUTPUT_DIRECTORY=$flu_out#" ${new_config}
 sed -i "s@^METADATA=.*@#METADATA=''@" ${new_config}
 sed -i "s@^GROUP_NAMES=.*@#GROUP_NAMES=''@" ${new_config}
 
-# replace reference file in the config file if new_reference_file is provided
-if [[ -n $new_reference_file ]]; then
-    sed -i "s#^REFERENCE_FILE=.*#REFERENCE_FILE=./references/$new_reference_file#" ${new_config}
+# Replace reference file in the config file if provided
+if [[ -n "$new_reference_file" ]]; then
+    sed -i "s#^REFERENCE_FILE=.*#REFERENCE_FILE=${FLUMINA_CODE_PATH}/references/$new_reference_file#" ${new_config}
 fi
 
-# check if ran with bash (from inside dvl_irma) or sbatch (standalone)
+# Check if running locally (from dvl_irma) or as a standalone Slurm job
 if [ "$run_mode" == "no_slurm" ]; then
-    echo "Script was run with bash. Not executing via slurm"
+    echo "Script was run with bash. Not executing via slurm."
     sed -i "s@^CLUSTER_JOBS=.*@CLUSTER_JOBS=FALSE@" ${new_config}
+
+    # Use the provided thread count from the Python script, or default to 4.
     threads_to_use=${num_threads:-4}
-    echo "Setting THREADS to $threads_to_use"
+    echo "Setting THREADS in config file to: $threads_to_use"
     sed -i "s@^THREADS=.*@THREADS=$threads_to_use@" ${new_config}
     
-    cd ~/git/_github/Flumina && /usr/bin/bash ~/git/_github/Flumina/flumina_nvsl.sh ${new_config}
+    # Run Flumina directly from the correct path
+    cd "$FLUMINA_CODE_PATH" && /usr/bin/bash flumina_nvsl.sh ${new_config}
 else
-    echo "Script was run with sbatch"
-    # set THREADS to 200
+    # This block is for running the script standalone, not from your Python pipeline
+    echo "Script was run with sbatch. Submitting a new Slurm job for Flumina."
     sed -i "s@^THREADS=.*@THREADS=200@" ${new_config}
-    # FIXED: Using absolute /git paths for the Slurm directory (-D) and the script
-    /cm/shared/apps/slurm/current/bin/sbatch --mem 700G --cpus-per-task=40 -W -D /git/_github/Flumina /git/_github/Flumina/flumina_nvsl.sh ${new_config}
+    sbatch --mem 650G --cpus-per-task=40 -W -D "$FLUMINA_CODE_PATH" "${FLUMINA_CODE_PATH}/flumina_nvsl.sh" ${new_config}
 fi
 
+# --- Post-processing and cleanup steps ---
+# Only run these steps if the Snakemake workflow was successful and created the output directory
+if [ -d "$flu_out/variant_analysis/aa_db" ]; then
+    echo "Snakemake workflow completed. Performing post-processing..."
+    
+    mkdir -p "$flu_out/slurm"
+    mv "${FLUMINA_CODE_PATH}/slurm"* "$flu_out/slurm/" 2>/dev/null
+    mv "${curdir}/slurm"* "$flu_out/slurm/" 2>/dev/null
 
-# cd ./flumina_out
-# for i in ./BAM_files/*; do name=$(basename $i); mkdir -p $flu_out/sample_gathering/$name; echo $name >> sample_list; done
-# while read i; do cp -r ./BAM_files/$i $flu_out/sample_gathering/$i/BAM_files; done < sample_list
-# while read i; do mkdir -p $flu_out/sample_gathering/$i/IRMA-consensus-contigs; cp -v ./IRMA-consensus-contigs/${i}.fasta $flu_out/sample_gathering/$i/IRMA-consensus-contigs; done < sample_list
-# while read i; do cp -r ./IRMA_results/$i $flu_out/sample_gathering/$i/IRMA_results; done < sample_list
-# while read i; do cp -r ./logs/$i $flu_out/sample_gathering/$i/logs; done < sample_list
-# while read i; do cp -r ./processed-reads/$i $flu_out/sample_gathering/$i/processed-reads; done < sample_list
-# while read i; do cp -r ./vcf_files/$i $flu_out/sample_gathering/$i/vcf_files; done < sample_list
-# while read i; do mkdir -p $flu_out/sample_gathering/$i/variant_analysis; cp -v ./variant_analysis/aa_db/${i}.csv $flu_out/sample_gathering/$i/variant_analysis; done < sample_list
-# while read i; do grep "$i" $flu_out/variant_analysis/curated_amino_acids.txt > $flu_out/sample_gathering/"$i"/variant_analysis/"$i"_curated_amino_acids.txt; done < sample_list
+    sample_count=$(ls "$flu_out/variant_analysis/aa_db/"*.csv | wc -l)
+    analysis_file="$flu_out/variant_analysis/T271A_D701N_E627K.txt"
 
-mkdir -p $flu_out/slurm
-mv /git/_github/Flumina/slurm* $flu_out/slurm
-mv $curdir/slurm* $flu_out/slurm
-# mv $curdir/config* $flu_out/sample_gathering/run_${dd}
-# mv $curdir/rename* $flu_out/sample_gathering/run_${dd}
-# cp ./variant_analysis/*.txt $flu_out/sample_gathering/run_${dd}
-# cp ./variant_analysis/*.csv $flu_out/sample_gathering/run_${dd}
-# mkdir $flu_out/sample_gathering/run_${dd}/slurm_out
-# mv $flu_out/sample_gathering/run_${dd}/slurm* $flu_out/sample_gathering/run_${dd}/slurm_out
+    echo "Number of samples in analysis: $sample_count" >> "$analysis_file"
+    echo "" >> "$analysis_file"
 
-# add sample count to T271A_D701N_E627K.txt
-sample_count=`ls  $flu_out/variant_analysis/aa_db/* | wc -l`
-echo "Number of samples in analysis: $sample_count" >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-echo "" >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-
-# Search for T271A, D701N, and E627K in the aa_db files and write to T271A_D701N_E627K.txt
-echo 'T271A' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-grep ".*PB2.*,271,.*T,A,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-
-echo 'D701N' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-grep ".*PB2.*,701,.*D,N,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-
-echo 'E627K' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
-grep ".*PB2.*,627,.*E,K,YES" $flu_out/variant_analysis/aa_db/*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> $flu_out/variant_analysis/T271A_D701N_E627K.txt
+    # Search for mutations of interest
+    echo 'T271A' >> "$analysis_file"
+    grep ".*PB2.*,271,.*T,A,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file"
+    echo 'D701N' >> "$analysis_file"
+    grep ".*PB2.*,701,.*D,N,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file"
+    echo 'E627K' >> "$analysis_file"
+    grep ".*PB2.*,627,.*E,K,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file"
+else
+    echo "WARNING: Snakemake output directory not found. Skipping post-processing."
+fi
