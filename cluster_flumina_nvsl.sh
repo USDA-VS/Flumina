@@ -9,7 +9,7 @@
 #SBATCH -t 168:00:00
 #SBATCH --export=none
 
-# --- FIX: Add set -e to exit immediately on error ---
+# Exit immediately if a command exits with a non-zero status.
 set -e
 
 # --- Read arguments from the Python script ---
@@ -43,7 +43,7 @@ cp "${FLUMINA_CODE_PATH}/config.cfg" ${new_config}
 
 # Generate new rename file more robustly
 printf "File,Sample\n" > ${new_rename}
-# --- FIX: Correctly parse sample name using wildcards ---
+# Correctly parse sample name using wildcards
 sample_name=$(ls *_R1_*.fastq.gz | head -n 1 | awk -F_ '{print $1}')
 echo "$sample_name,$sample_name" >> ${new_rename}
 
@@ -68,13 +68,12 @@ if [ "$run_mode" == "no_slurm" ]; then
     echo "Setting THREADS in config file to: $threads_to_use"
     sed -i "s@^THREADS=.*@THREADS=$threads_to_use@" ${new_config}
     
-    # Run Flumina directly from the correct path
-    cd "$FLUMINA_CODE_PATH" && /usr/bin/bash flumina_nvsl.sh ${new_config}
+    # Run Flumina directly using 'bash' from the PATH
+    cd "$FLUMINA_CODE_PATH" && bash flumina_nvsl.sh ${new_config}
 else
     # This block is for running the script standalone, not from your Python pipeline
     echo "Script was run with sbatch. Submitting a new Slurm job for Flumina."
     sed -i "s@^THREADS=.*@THREADS=200@" ${new_config}
-    # --- FIX: Use 'sbatch' directly instead of a hardcoded path ---
     sbatch --mem 650G --cpus-per-task=40 -W -D "$FLUMINA_CODE_PATH" "${FLUMINA_CODE_PATH}/flumina_nvsl.sh" ${new_config}
 fi
 
@@ -95,11 +94,11 @@ if [ -d "$flu_out/variant_analysis/aa_db" ]; then
 
     # Search for mutations of interest
     echo 'T271A' >> "$analysis_file"
-    grep ".*PB2.*,271,.*T,A,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file"
+    grep ".*PB2.*,271,.*T,A,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file" || true
     echo 'D701N' >> "$analysis_file"
-    grep ".*PB2.*,701,.*D,N,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file"
+    grep ".*PB2.*,701,.*D,N,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file" || true
     echo 'E627K' >> "$analysis_file"
-    grep ".*PB2.*,627,.*E,K,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file"
+    grep ".*PB2.*,627,.*E,K,YES" "$flu_out/variant_analysis/aa_db/"*.csv | awk -F, '{if (!($2 in max) || $10 > max[$2]) {max[$2] = $10; line[$2] = $2 " -- VAF " $10}} END {for (i in line) print line[i]}' >> "$analysis_file" || true
 else
     echo "WARNING: Snakemake output directory not found. Skipping post-processing."
 fi
